@@ -12,6 +12,16 @@ _FORMATTED_TIME = _LOCAL_TIME.strftime("%A, %B %d, %Y at %I:%M %p %Z")
 # Module-level cache to store final prompts (loaded once)
 _CACHED_PROMPTS = {}
 
+# ============================================================
+# 🍴 Items that do NOT need spice level
+# ============================================================
+_NO_SPICE_ITEMS = [
+    "Pani Puri", "Dahi Batata Puri", "Pav Bhaji", "Samosa", "Samosa Chaat",
+    "Aloo Tikki Chaat", "Chinese Bhel", "Puri", "Extra Tamarind Chutney",
+    "Extra Green Chutney", "Pani Puri Water", "Chaat", "Bhel"
+]
+
+
 def _get_agent_instruction():
     """Load and cache AGENT_INSTRUCTION - computed once at module load"""
     if "AGENT_INSTRUCTION" not in _CACHED_PROMPTS:
@@ -235,10 +245,21 @@ You are using OpenAI Live API which supports **English**, **Telugu**, and **Hind
 
 - **NEVER place an order without explicit "yes" or "confirm" response to your confirmation question**
 
+# Skip Spice Level Rule (UPDATED - SILENT SKIP)
+- If the ordered item is in the following list:
+  {", ".join(_NO_SPICE_ITEMS)}
+  → **Skip asking spice level silently**.
+- Do NOT mention to the user that spice level is skipped.
+- Simply move to the next logical step (either confirming the order or asking for next item).
+- Example:
+  - "1 Pani Puri" → Do not say anything about spice level.
+  - "1 Chicken Biryani" → Ask: "What spice level would you like?"
+
 # Notes
 - Use current date/time for order flexibility:
   {_FORMATTED_TIME}
 """
+
     return _CACHED_PROMPTS["AGENT_INSTRUCTION"]
 
 # Module-level constant - loaded once when module is imported
@@ -314,8 +335,23 @@ Hello! Welcome to bansari Restaurant. I'm Sarah. What would you like to order to
 2. **Then ask: How many plates?** → Wait for response  
 3. **Finally ask: What spice level?** → Wait for response
 
-## Spice Level (CRITICAL - ALWAYS ASK)
-- **ALWAYS ask for spice level for EVERY item ordered**
+## Spice Level (CRITICAL - CONDITIONAL ASK)
+- **Ask for spice level ONLY if the item is NOT in the following list:**
+  {", ".join(_NO_SPICE_ITEMS)}
+
+- Example:
+  - "Pani Puri" → Skip asking spice level
+  - "Pav Bhaji" → Skip asking spice level
+  - "Chicken 65" → Ask: "What spice level would you like? Mild, Medium, Hot, or Extra Hot?"
+
+- Options: Mild, Medium, Hot, Extra Hot
+- Example question (ask SEPARATELY after quantity if applicable):
+  - English: "What spice level would you like? Mild, Medium, Hot, or Extra Hot?"
+
+- **ALWAYS store items with spice level in the name field (if applicable)**
+- Format: "Item Name - spice_level" (e.g., "Lamb Biryani - hot", "Chicken 65 - medium")
+- When placing order with create_order tool, name field MUST include spice level (if applicable)
+
 - Options: Mild, Medium, Hot, Extra Hot
 - Example questions (ask SEPARATELY after quantity):
   - English: "What spice level would you like? Mild, Medium, Hot, or Extra Hot?"
